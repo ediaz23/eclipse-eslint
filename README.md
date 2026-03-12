@@ -19,3 +19,8 @@ Your JavaScript project must provide a working `lint` script in `package.json`:
     "lint": "eslint . --ext .js,.mjs,.cjs"
   }
 }
+```
+
+## Add the project nature
+
+The Eclipse project must be configured with the ESLint nature (`com.eclipse.eslint.builder.nature`) or the builder will not run.
