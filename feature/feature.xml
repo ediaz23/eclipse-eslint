@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feature
+      id="com.eclipse.eslint.builder.feature"
+      label="Eclipse ESLint Builder"
+      version="1.0.0.qualifier"
+      provider-name="Eclipse ESLint Builder">
+
+   <description>
+      Eclipse plugin that runs ESLint through npm and shows lint results as Eclipse markers.
+   </description>
+
+   <copyright>
+      Copyright (c) 2026.
+   </copyright>
+
+   <license>
+      MIT
+   </license>
+
+   <plugin
+         id="com.eclipse.eslint.builder"
+         download-size="0"
+         install-size="0"
+         version="0.0.0"
+         unpack="false"/>
+
+</feature>
