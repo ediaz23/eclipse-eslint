@@ -1,0 +1,15 @@
+Manifest-Version: 1.0
+Bundle-ManifestVersion: 2
+Bundle-Name: Eclipse ESLint Builder
+Bundle-SymbolicName: com.eclipse.eslint.builder;singleton:=true
+Bundle-Version: 1.0.0.qualifier
+Export-Package: com.eclipse.eslint.builder
+Require-Bundle: org.eclipse.core.resources,
+ org.eclipse.core.runtime,
+ org.eclipse.ui,
+ org.eclipse.ui.ide,
+ org.eclipse.jface,
+ org.eclipse.osgi,
+ com.google.gson
+Automatic-Module-Name: com.eclipse.eslint.builder.singleton.true
+Bundle-RequiredExecutionEnvironment: JavaSE-17
