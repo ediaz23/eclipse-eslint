@@ -95,22 +95,21 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
             logInfo("runEslint start: project=" + project.getName());
             java.io.File projectDir = project.getLocation().toFile();
             String npmCommand = resolveNpmCommand(projectDir);
+            String projectLoc = project.getLocation().toOSString();
 
             logInfo("using npm command: " + npmCommand);
-            
-            ProcessBuilder pb = new ProcessBuilder(npmCommand, "run", "--silent", "lint", "--", "-f", "json");
+
+            ProcessBuilder pb = new ProcessBuilder(npmCommand, "--prefix", projectLoc, "run", "lint", "--silent", "--",
+                    "-f", "json");
             if (!"npm".equals(npmCommand)) {
                 String binDir = new java.io.File(npmCommand).getParent();
                 String oldPath = pb.environment().get("PATH");
-                pb.environment().put(
-                        "PATH",
-                        binDir + java.io.File.pathSeparator + (oldPath != null ? oldPath : "")
-                );
+                pb.environment().put("PATH", binDir + java.io.File.pathSeparator + (oldPath != null ? oldPath : ""));
             }
 
             pb.directory(projectDir);
 
-            logInfo("starting process: npm run --silent lint -- -f json, dir=" + project.getLocation().toOSString());
+            logInfo("starting process: npm --prefix " + projectLoc + " run --silent lint -- -f json");
 
             Process process = pb.start();
 
@@ -131,8 +130,8 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
             ESLintFileResult[] results;
             try {
                 results = gson.fromJson(stdout, ESLintFileResult[].class);
-                logInfo("eslint json parsed: project=" + project.getName()
-                        + ", results=" + (results != null ? results.length : 0));
+                logInfo("eslint json parsed: project=" + project.getName() + ", results="
+                        + (results != null ? results.length : 0));
             } catch (Exception e) {
                 logError("Invalid ESLint JSON output: project=" + project.getName() + "\n" + stdout, e);
                 if (stderr != null && !stderr.trim().isEmpty()) {
@@ -256,7 +255,7 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
             LOG.log(new Status(IStatus.ERROR, PLUGIN_ID, message));
         }
     }
-    
+
     private String resolveNpmCommand(java.io.File projectDir) {
         String local = resolveLocalProjectNpm(projectDir);
         if (local != null) {
@@ -289,18 +288,17 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
             }
 
             version = normalizeNodeVersion(version);
+
             if (version == null) {
                 return null;
             }
 
-            String envNvmDir = System.getenv("NVM_DIR");
+            String userHome = System.getenv("HOME");
             String home = System.getProperty("user.home");
 
-            String[] nvmDirs = new String[] {
-                    new java.io.File(projectDir, ".nvm").getAbsolutePath(),
-                    envNvmDir,
-                    home != null ? home + "/.nvm" : null
-            };
+            String[] nvmDirs = new String[] { new java.io.File(projectDir, ".nvm").getAbsolutePath(),
+                    System.getenv("NVM_DIR"), home != null ? home + "/.nvm" : null,
+                    userHome != null ? userHome + "/.nvm" : null };
 
             for (String nvmDir : nvmDirs) {
                 if (nvmDir == null || nvmDir.trim().isEmpty()) {
@@ -327,6 +325,48 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
                 java.io.File npm = new java.io.File(nvmBin, "npm");
                 if (npm.isFile() && npm.canExecute()) {
                     return npm.getAbsolutePath();
+                }
+            }
+
+            String userHome = System.getenv("HOME");
+            String home = System.getProperty("user.home");
+
+            String[] nvmDirs = new String[] { System.getenv("NVM_DIR"), home != null ? home + "/.nvm" : null,
+                    userHome != null ? userHome + "/.nvm" : null };
+
+            for (String nvmDir : nvmDirs) {
+                if (nvmDir == null || nvmDir.trim().isEmpty()) {
+                    continue;
+                }
+
+                java.io.File aliasDefault = new java.io.File(nvmDir, "alias/default");
+                if (aliasDefault.isFile()) {
+                    try {
+                        String alias = new String(java.nio.file.Files.readAllBytes(aliasDefault.toPath()),
+                                java.nio.charset.StandardCharsets.UTF_8).trim();
+
+                        if (!alias.isEmpty()) {
+                            java.io.File npm = new java.io.File(nvmDir, "versions/node/v" + alias + "/bin/npm");
+                            if (npm.isFile() && npm.canExecute()) {
+                                return npm.getAbsolutePath();
+                            }
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+
+                java.io.File versionsDir = new java.io.File(nvmDir, "versions/node");
+                java.io.File[] versionDirs = versionsDir.listFiles(java.io.File::isDirectory);
+
+                if (versionDirs == null) {
+                    continue;
+                }
+
+                for (java.io.File versionDir : versionDirs) {
+                    java.io.File npm = new java.io.File(versionDir, "bin/npm");
+                    if (npm.isFile() && npm.canExecute()) {
+                        return npm.getAbsolutePath();
+                    }
                 }
             }
 
@@ -366,8 +406,7 @@ public class ESLintBuilder extends IncrementalProjectBuilder {
                 content.append(line).append('\n');
             }
 
-            java.util.regex.Matcher matcher = Pattern
-                    .compile("\"node\"\\s*:\\s*\"([^\"]+)\"")
+            java.util.regex.Matcher matcher = Pattern.compile("\"node\"\\s*:\\s*\"([^\"]+)\"")
                     .matcher(content.toString());
 
             if (!matcher.find()) {
